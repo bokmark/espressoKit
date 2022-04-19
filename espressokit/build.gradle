@@ -4,6 +4,7 @@ plugins {
     id 'kotlin-parcelize'
     id 'maven-publish'
     id 'org.jetbrains.kotlin.android'
+    id 'signing'
 }
 
 android {
@@ -52,17 +53,71 @@ afterEvaluate {
     publishing {
         repositories {
             maven {
-                url = "https://repo1.maven.org/maven2/"
+                def releasesRepoUrl = getReleaseRepositoryUrl()
+                def snapshotsRepoUrl = getSnapshotRepositoryUrl()
+                url = isReleaseBuild() ? releasesRepoUrl : snapshotsRepoUrl
+
+                credentials(PasswordCredentials) {
+                    username = getRepositoryUsername()
+                    password = getRepositoryPassword()
+                }
             }
         }
+
         publications {
             release(MavenPublication) {
                 from components.release
 
-                groupId = 'zone.bokmark'
-                artifactId = 'espresso'
-                version = android.defaultConfig.versionName
+                groupId = GROUP_ID
+                artifactId = ARTIFACT_ID
+                version = VERSION_NAME
+
+                pom {
+                    name = POM_NAME
+                    description = POM_DESCRIPTION
+                    url = POM_URL
+                    licenses {
+                        license {
+                            name = POM_LICENCE_NAME
+                            url = POM_LICENCE_URL
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = POM_DEVELOPER_ID
+                            name = POM_DEVELOPER_NAME
+                            email = POM_DEVELOPER_EMAIL
+                        }
+                    }
+                    scm {
+                        connection = POM_SCM_CONNECTION
+                        developerConnection = POM_SCM_DEV_CONNECTION
+                        url = POM_SCM_URL
+                    }
+                }
             }
         }
     }
+}
+
+def isReleaseBuild() {
+    return VERSION_NAME.contains("SNAPSHOT") == false
+}
+
+def getReleaseRepositoryUrl() {
+    return hasProperty('RELEASE_REPOSITORY_URL') ? RELEASE_REPOSITORY_URL :
+        "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+}
+
+def getSnapshotRepositoryUrl() {
+    return hasProperty('SNAPSHOT_REPOSITORY_URL') ? SNAPSHOT_REPOSITORY_URL :
+        "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+}
+
+def getRepositoryUsername() {
+    return hasProperty('NEXUS_USERNAME') ? NEXUS_USERNAME : ""
+}
+
+def getRepositoryPassword() {
+    return hasProperty('NEXUS_PASSWORD') ? NEXUS_PASSWORD : ""
 }
